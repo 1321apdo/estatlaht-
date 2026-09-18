@@ -1,0 +1,6 @@
+{
+  "name": "استطلاع الرأي وفيزا",
+  "description": "تطبيق استطلاع الرأي والربح المتوازن المرتبط بمشروع كروت فيزا مع تعظيم أرباح أدموب والمكسب الإعلاني.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

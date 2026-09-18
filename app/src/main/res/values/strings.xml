@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">استطلاع الرأي وفيزا</string>
+    <string name="title_home">الرئيسية</string>
+    <string name="title_surveys">استطلاع الرأي</string>
+    <string name="title_redeem">مشروع فيزا والسحب</string>
+    <string name="title_profile">حسابي</string>
+    
+    <string name="daily_checkin">تسجيل الدخول اليومي</string>
+    <string name="daily_checkin_desc">احصل على نقاطك اليومية المجانية بالضغط هنا</string>
+    <string name="spin_wheel">عجلة الحظ</string>
+    <string name="spin_wheel_desc">أدر العجلة وجرب حظك لتكسب نقاط إضافية</string>
+    <string name="scratch_card">امسح واربح</string>
+    <string name="scratch_card_desc">امسح البطاقة الخدشية واكشف عن جائزتك</string>
+    <string name="math_quiz">المسائل الحسابية</string>
+    <string name="math_quiz_desc">حل مسائل سريعة واكسب نقاط على إجاباتك الصحيحة</string>
+    
+    <string name="points_balance">رصيد النقاط الفعال</string>
+    <string name="points_unit">نقطة</string>
+    <string name="points_earned_toast">تهانينا! لقد حصلت على %1$d نقطة!</string>
+    <string name="redeem_title">سحب الأرباح ومشروع كروت فيزا</string>
+    <string name="redeem_placeholder">أدخل تفاصيل الدفع (رقم بطاقة فيزا، اسم صاحب البطاقة...)</string>
+    <string name="redeem_success_toast">تم تقديم طلب السحب بنجاح! سيتم التنفيذ عبر شبكة فيزا.</string>
+    <string name="adsense_info">معرف أدموب المعتمد للمطور: %1$s</string>
+</resources>
