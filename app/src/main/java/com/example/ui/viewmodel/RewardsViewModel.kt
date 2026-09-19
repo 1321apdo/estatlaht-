@@ -6,6 +6,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.data.model.HighValueAdSenseTask
+import com.example.data.model.HighValueTaskManager
 import com.example.data.model.RedemptionRequest
 import com.example.data.model.Survey
 import com.example.data.model.SurveyDataProvider
@@ -44,11 +46,24 @@ class RewardsViewModel(private val repository: RewardsRepository) : ViewModel() 
 
     // AdMob publisher and app IDs configured for monetization
     val adsensePublisherId = "ca-pub-8214981197698574"
-    val admobAppId = "ca-app-pub-8214981197698574~9486833110"
-    val admobBannerId = "ca-app-pub-8214981197698574/5376197710"
+    val admobAppId = "ca-app-pub-8214981197698574~7842643561"
+    val admobBannerId = "ca-app-pub-8214981197698574/4237977455"
 
     // --- Personal Free Key ---
     val personalFreeKey = "KEY-FREE-APDO-8214"
+
+    // --- High-Value AdSense Tasks & Instant Notifications ---
+    val highValueTasks: List<HighValueAdSenseTask> = HighValueTaskManager.sampleTasks
+
+    fun completeHighValueTask(
+        task: HighValueAdSenseTask,
+        onSuccess: (Int) -> Unit
+    ) {
+        viewModelScope.launch {
+            repository.completeTask("ad_high_value_${task.id}", task.rewardPoints)
+            onSuccess(task.rewardPoints)
+        }
+    }
 
     // --- Survey System State ---
     val surveysList: List<Survey> = SurveyDataProvider.sampleSurveys

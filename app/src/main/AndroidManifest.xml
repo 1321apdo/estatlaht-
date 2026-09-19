@@ -4,6 +4,9 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
 
     <!-- Prevent AdServices runtime measurement service bind failures on headless container/emulators -->
@@ -24,7 +27,7 @@
         <!-- Google AdMob Production App ID & Verification -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-8214981197698574~9486833110" />
+            android:value="ca-app-pub-8214981197698574~7842643561" />
 
         <!-- AdMob Delay App Measurement until MobileAds.initialize -->
         <meta-data

@@ -47,7 +47,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
+import com.example.data.model.HighValueAdSenseTask
 import com.example.ui.viewmodel.RewardsViewModel
+import com.example.util.NotificationHelper
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
@@ -72,7 +74,7 @@ fun AdmobBanner(modifier: Modifier = Modifier) {
             try {
                 AdView(context).apply {
                     setAdSize(AdSize.BANNER)
-                    adUnitId = "ca-app-pub-8214981197698574/5376197710"
+                    adUnitId = "ca-app-pub-8214981197698574/4237977455"
                     loadAd(AdRequest.Builder().build())
                 }
             } catch (_: Exception) {
@@ -139,6 +141,128 @@ fun FreeKeyCard(
                 contentDescription = null,
                 tint = AccentGold
             )
+        }
+    }
+}
+
+@Composable
+fun HighValueTasksSection(
+    tasks: List<HighValueAdSenseTask>,
+    onCompleteTask: (HighValueAdSenseTask) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.NotificationsActive,
+                    contentDescription = null,
+                    tint = AccentGold,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "مهام واستطلاعات ممتازة (AdSense & Visa):",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+            }
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = AccentOrange.copy(alpha = 0.2f)
+            ) {
+                Text(
+                    text = "نقاط مضاعفة 🔥",
+                    color = AccentOrange,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+        }
+
+        tasks.forEach { task ->
+            Card(
+                colors = CardDefaults.cardColors(containerColor = SlateMedium),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, if (task.isHotDeal) AccentGold.copy(alpha = 0.4f) else SlateLight),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = SlateLight
+                        ) {
+                            Text(
+                                text = task.eCpmCategory,
+                                color = AccentGold,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+                        Text(
+                            text = "+${task.rewardPoints} نقطة فيزا",
+                            color = GlowGreen,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 13.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = task.title,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = task.description,
+                        color = Color.LightGray,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "الراعي: ${task.advertiser}",
+                            color = Color.Gray,
+                            fontSize = 10.sp
+                        )
+                        Button(
+                            onClick = { onCompleteTask(task) },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AccentGold,
+                                contentColor = SlateDark
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                        ) {
+                            Text("تنفيذ المهمة وإشعار الربح", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -646,6 +770,26 @@ fun HomeScreen(
                 FreeKeyCard(
                     personalKey = viewModel.personalFreeKey,
                     onOpenDialog = { showFreeKeyDialog = true }
+                )
+            }
+
+            // High-Value AdSense & Visa Tasks Section (with instant notification)
+            item {
+                HighValueTasksSection(
+                    tasks = viewModel.highValueTasks,
+                    onCompleteTask = { task ->
+                        viewModel.completeHighValueTask(task) { pts ->
+                            Toast.makeText(context, "تهانينا! أكملت '${task.title}' وحصلت على +$pts نقطة!", Toast.LENGTH_LONG).show()
+                            // Trigger rich push notification
+                            NotificationHelper.showAdSenseTaskNotification(
+                                context = context,
+                                notificationId = task.id.hashCode(),
+                                title = "تم اعتماد أرباح: ${task.title}",
+                                message = "تم إضافة ${task.rewardPoints} نقطة إلى محفظتك بنجاح.",
+                                rewardBadge = "+${task.rewardPoints} نقطة فيزا"
+                            )
+                        }
+                    }
                 )
             }
 
