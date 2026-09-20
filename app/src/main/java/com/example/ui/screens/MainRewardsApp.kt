@@ -68,9 +68,18 @@ val ErrorRed = Color(0xFFFF1744)
 // --- REAL ADMOB BANNER COMPONENT ---
 @Composable
 fun AdmobBanner(modifier: Modifier = Modifier) {
+    // Detect whether running in a cloud/headless emulator container without GPU rendernode
+    val isHeadlessEmulator = remember {
+        val renderNode = java.io.File("/dev/dri/renderD128")
+        val isEmulator = android.os.Build.FINGERPRINT.contains("generic", ignoreCase = true) ||
+                android.os.Build.HARDWARE.contains("goldfish", ignoreCase = true) ||
+                android.os.Build.HARDWARE.contains("ranchu", ignoreCase = true)
+        isEmulator && !renderNode.exists()
+    }
+
     var hasAdError by remember { mutableStateOf(false) }
 
-    if (!hasAdError) {
+    if (!hasAdError && !isHeadlessEmulator) {
         AndroidView(
             modifier = modifier,
             factory = { context ->
@@ -81,7 +90,6 @@ fun AdmobBanner(modifier: Modifier = Modifier) {
                         setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
                         adListener = object : com.google.android.gms.ads.AdListener() {
                             override fun onAdFailedToLoad(error: com.google.android.gms.ads.LoadAdError) {
-                                // Gracefully fallback to simulated sponsor badge if ad fails to load
                                 hasAdError = true
                             }
                         }
