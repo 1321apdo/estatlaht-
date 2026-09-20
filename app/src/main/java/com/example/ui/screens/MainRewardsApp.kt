@@ -1323,11 +1323,79 @@ fun ProfileScreen(
                 onClick = { activeSubTab = 2 },
                 text = { Text("شهادة الاعتمادية", fontWeight = FontWeight.Bold, fontSize = 11.sp) }
             )
+            Tab(
+                selected = activeSubTab == 3,
+                onClick = { activeSubTab = 3 },
+                text = { Text("الخصوصية والأمان", fontWeight = FontWeight.Bold, fontSize = 11.sp) }
+            )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        if (activeSubTab == 2) {
+        if (activeSubTab == 3) {
+            // Privacy Policy & Human Rights / GDPR / Child Protection Compliance Card
+            Card(
+                colors = CardDefaults.cardColors(containerColor = SlateMedium),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, AccentGold.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Security,
+                            contentDescription = null,
+                            tint = AccentGold,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            text = "سياسة الخصوصية وحماية الحقوق والبيانات",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "• الالتزام بحقوق الإنسان والخصوصية: هذا التطبيق يلتزم تماماً بالقوانين الدولية لحماية البيانات (GDPR & CCPA)، ولا يجمع أي بيانات شخصية حساسة أو صور أو جهات اتصال.",
+                        color = Color.LightGray,
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "• حفظ البيانات الآمن: جميع النقاط، وتفاصيل بطاقات فيزا وسجلات الأرباح يتم تخزينها وتشفيرها محلياً داخل جهازك في قاعدة بيانات Room Database.",
+                        color = Color.LightGray,
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "• الامتثال لسياسات Google AdMob و Play Store: يتم استخدام معرفات إعلانات أدموب الرسمية الموثقة مع احترام خيارات الخصوصية للمستخدم، والتطبيق خالٍ تماماً من البرمجيات الضارة.",
+                        color = Color.LightGray,
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "• حقوق الملكية والنشر: جميع حقوق التطبيق والمحتوى البرمجي محفوظة للمطور (apdo1321@gmail.com).",
+                        color = AccentGold,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp
+                    )
+                }
+            }
+        } else if (activeSubTab == 2) {
             // Certificate of Reliability and Integration Verification Card
             Card(
                 colors = CardDefaults.cardColors(containerColor = SlateMedium),
