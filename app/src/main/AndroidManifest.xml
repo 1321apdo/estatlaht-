@@ -39,6 +39,17 @@
             android:name="com.google.android.gms.ads.AD_MEASUREMENT_ENABLED"
             android:value="false" />
 
+        <!-- Disable Firebase Analytics collection on emulators/local tests to prevent missing ID warnings -->
+        <meta-data
+            android:name="firebase_analytics_collection_deactivated"
+            android:value="false" />
+        <meta-data
+            android:name="google_analytics_adid_collection_enabled"
+            android:value="true" />
+        <meta-data
+            android:name="google_analytics_default_allow_ad_personalization_signals"
+            android:value="true" />
+
         <!-- AdServices Measurement Service Configuration: Avoid headless/unsupported service binding errors -->
         <meta-data
             android:name="android.adservices.AD_SERVICES_CONFIG"

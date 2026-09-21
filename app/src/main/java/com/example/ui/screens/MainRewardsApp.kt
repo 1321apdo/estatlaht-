@@ -71,9 +71,14 @@ fun AdmobBanner(modifier: Modifier = Modifier) {
     // Detect whether running in a cloud/headless emulator container without GPU rendernode
     val isHeadlessEmulator = remember {
         val renderNode = java.io.File("/dev/dri/renderD128")
-        val isEmulator = android.os.Build.FINGERPRINT.contains("generic", ignoreCase = true) ||
+        val isEmulator = android.os.Build.FINGERPRINT.startsWith("generic", ignoreCase = true) ||
+                android.os.Build.FINGERPRINT.contains("vbox", ignoreCase = true) ||
                 android.os.Build.HARDWARE.contains("goldfish", ignoreCase = true) ||
-                android.os.Build.HARDWARE.contains("ranchu", ignoreCase = true)
+                android.os.Build.HARDWARE.contains("ranchu", ignoreCase = true) ||
+                android.os.Build.MODEL.contains("google_sdk", ignoreCase = true) ||
+                android.os.Build.MODEL.contains("Emulator", ignoreCase = true) ||
+                android.os.Build.MANUFACTURER.contains("Genymotion", ignoreCase = true) ||
+                !renderNode.exists()
         isEmulator && !renderNode.exists()
     }
 

@@ -21,4 +21,9 @@
     <string name="redeem_placeholder">أدخل تفاصيل الدفع (رقم بطاقة فيزا، اسم صاحب البطاقة...)</string>
     <string name="redeem_success_toast">تم تقديم طلب السحب بنجاح! سيتم التنفيذ عبر شبكة فيزا.</string>
     <string name="adsense_info">معرف أدموب المعتمد للمطور: %1$s</string>
+    
+    <!-- Firebase/Google Services placeholders to satisfy App Measurement check -->
+    <string name="google_app_id" translatable="false">1:148594802387:android:aqxkbbkv53jdeozvkz4mdf</string>
+    <string name="gcm_defaultSenderId" translatable="false">148594802387</string>
+    <string name="default_web_client_id" translatable="false">148594802387.apps.googleusercontent.com</string>
 </resources>
