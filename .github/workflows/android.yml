@@ -25,11 +25,12 @@ jobs:
       
     - name: Build with Gradle
       env:
-        GRADLE_OPTS: "-Djava.awt.headless=true"
-      run: ./gradlew assembleDebug
+        GRADLE_OPTS: "-Djava.awt.headless=true -Xmx4g"
+      run: ./gradlew assembleDebug --no-daemon --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: app-debug
         path: app/build/outputs/apk/debug/*.apk
