@@ -1,22 +1,8 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <!-- Credit Card / Rewards Gold Foreground Icon -->
-    <path
-        android:fillColor="#FFD700"
-        android:pathData="M24,34h60c4.4,0 8,3.6 8,8v24c0,4.4 -3.6,8 -8,8H24c-4.4,0 -8,-3.6 -8,-8V42C16,37.6 19.6,34 24,34z" />
-    <!-- Card Dark Magnetic Stripe -->
-    <path
-        android:fillColor="#1E293B"
-        android:pathData="M16,44h76v8H16z" />
-    <!-- Chip -->
-    <path
-        android:fillColor="#FFA000"
-        android:pathData="M24,56h12v10H24z" />
-    <!-- Star/Reward badge -->
-    <path
-        android:fillColor="#00E676"
-        android:pathData="M74,61m-6,0a6,6 0 1,0 12,0a6,6 0 1,0 -12,0" />
-</vector>
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:width="72dp"
+        android:height="72dp"
+        android:drawable="@drawable/app_icon_fg_1790143646243"
+        android:gravity="center" />
+</layer-list>

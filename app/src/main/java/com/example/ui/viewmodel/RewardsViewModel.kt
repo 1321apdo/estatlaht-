@@ -48,6 +48,16 @@ class RewardsViewModel(private val repository: RewardsRepository) : ViewModel() 
     val adsensePublisherId = "ca-pub-8214981197698574"
     val admobAppId = "ca-app-pub-8214981197698574~7842643561"
     val admobBannerId = "ca-app-pub-8214981197698574/4237977455"
+    val admobInterstitialId = "ca-app-pub-8214981197698574/8833910245"
+    val admobRewardedId = "ca-app-pub-8214981197698574/6912384751"
+
+    // --- Strategic AdMob Earnings (الربح الاستراتيجي) ---
+    fun completeStrategicAdReward(adType: String, points: Int, onSuccess: (Int) -> Unit) {
+        viewModelScope.launch {
+            repository.completeTask("ربح استراتيجي أدموب ($adType)", points)
+            onSuccess(points)
+        }
+    }
 
     // --- Personal Free Key ---
     val personalFreeKey = "KEY-FREE-APDO-8214"
@@ -354,6 +364,23 @@ class RewardsViewModel(private val repository: RewardsRepository) : ViewModel() 
             } else {
                 onError("رمز المفتاح غير صحيح. حاول تجربة المفتاح المجاني الخاص بك!")
             }
+        }
+    }
+
+    // --- Strategic Online AdMob Monetization Rewards ---
+    fun claimStrategicAdMobReward(points: Int = 100, taskTitle: String = "مشاهدة إعلان أدموب الاستراتيجي", onSuccess: (Int) -> Unit) {
+        viewModelScope.launch {
+            val taskId = "admob_strategic_${System.currentTimeMillis()}"
+            repository.completeTask(taskId, points)
+            onSuccess(points)
+        }
+    }
+
+    fun boostVisaProcessing(onSuccess: (Int) -> Unit) {
+        viewModelScope.launch {
+            val bonusPoints = 50
+            repository.completeTask("admob_visa_boost_${System.currentTimeMillis()}", bonusPoints)
+            onSuccess(bonusPoints)
         }
     }
 

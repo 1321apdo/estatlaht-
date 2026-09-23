@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.app.Activity
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.viewmodel.RewardsViewModel
+import com.example.util.AdMobManager
 import java.util.Locale
 
 // Visa & Payout Option Data Class
@@ -402,6 +404,46 @@ fun VisaRedeemScreen(viewModel: RewardsViewModel, currentPoints: Int) {
                                     text = "تأكيد طلب السحب عبر مشروع فيزا",
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 14.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // AdMob Strategic Acceleration Button
+                        val activity = context as? Activity
+                        OutlinedButton(
+                            onClick = {
+                                if (activity != null) {
+                                    AdMobManager.showRewarded(
+                                        activity = activity,
+                                        onRewardEarned = { _ ->
+                                            viewModel.boostVisaProcessing { bonus ->
+                                                Toast.makeText(context, "⚡ تم منحك أولوية المعالجة السريعة وكسب $bonus نقطة إضافية!", Toast.LENGTH_LONG).show()
+                                            }
+                                        },
+                                        onComplete = {}
+                                    )
+                                } else {
+                                    viewModel.boostVisaProcessing { bonus ->
+                                        Toast.makeText(context, "⚡ تم منحك أولوية المعالجة السريعة وكسب $bonus نقطة إضافية!", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            border = BorderStroke(1.dp, GlowGreen),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = GlowGreen),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Bolt, contentDescription = null, tint = GlowGreen, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "تسريع معالجة طلبك عبر إعلان أدموب (+50 نقطة)",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
                                 )
                             }
                         }

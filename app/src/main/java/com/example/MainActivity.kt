@@ -12,6 +12,7 @@ import com.example.ui.screens.MainRewardsApp
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.RewardsViewModel
 import com.example.ui.viewmodel.RewardsViewModelFactory
+import com.example.util.AdMobManager
 import com.google.android.gms.ads.MobileAds
 import java.io.File
 
@@ -29,12 +30,9 @@ class MainActivity : ComponentActivity() {
     } catch (_: Exception) {
     }
 
-    // 1. Initialize Google Mobile Ads SDK safely for monetization
+    // 1. Initialize Google Mobile Ads SDK safely via AdMobManager
     try {
-      val requestConfiguration = MobileAds.getRequestConfiguration().toBuilder()
-        .build()
-      MobileAds.setRequestConfiguration(requestConfiguration)
-      MobileAds.initialize(this) {}
+      AdMobManager.initialize(this)
     } catch (_: Exception) {
       // Graceful fallback in environments without full Google Play Services
     }

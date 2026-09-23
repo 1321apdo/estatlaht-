@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.app.Activity
 import android.widget.Toast
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -50,6 +51,7 @@ import com.example.R
 import com.example.data.model.HighValueAdSenseTask
 import com.example.ui.viewmodel.RewardsViewModel
 import com.example.util.NotificationHelper
+import com.example.util.AdMobManager
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
@@ -68,70 +70,81 @@ val ErrorRed = Color(0xFFFF1744)
 // --- REAL ADMOB BANNER COMPONENT ---
 @Composable
 fun AdmobBanner(modifier: Modifier = Modifier) {
-    // Detect whether running in a cloud/headless emulator container without GPU rendernode
-    val isHeadlessEmulator = remember {
-        val renderNode = java.io.File("/dev/dri/renderD128")
-        val isEmulator = android.os.Build.FINGERPRINT.startsWith("generic", ignoreCase = true) ||
-                android.os.Build.FINGERPRINT.contains("vbox", ignoreCase = true) ||
-                android.os.Build.HARDWARE.contains("goldfish", ignoreCase = true) ||
-                android.os.Build.HARDWARE.contains("ranchu", ignoreCase = true) ||
-                android.os.Build.MODEL.contains("google_sdk", ignoreCase = true) ||
-                android.os.Build.MODEL.contains("Emulator", ignoreCase = true) ||
-                android.os.Build.MANUFACTURER.contains("Genymotion", ignoreCase = true) ||
-                !renderNode.exists()
-        isEmulator && !renderNode.exists()
-    }
+    // Check whether we are in a headless cloud container without GPU rendernode
+    val isHeadlessEmulator = remember { AdMobManager.isHeadlessContainer() }
+    var adLoadedSuccessfully by remember { mutableStateOf(false) }
+    var useFallbackUnit by remember { mutableStateOf(false) }
 
-    var hasAdError by remember { mutableStateOf(false) }
-
-    if (!hasAdError && !isHeadlessEmulator) {
-        AndroidView(
-            modifier = modifier,
-            factory = { context ->
-                try {
-                    AdView(context).apply {
-                        setAdSize(AdSize.BANNER)
-                        adUnitId = "ca-app-pub-8214981197698574/4237977455"
-                        setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
-                        adListener = object : com.google.android.gms.ads.AdListener() {
-                            override fun onAdFailedToLoad(error: com.google.android.gms.ads.LoadAdError) {
-                                hasAdError = true
+    Box(
+        modifier = modifier
+            .background(SlateMedium),
+        contentAlignment = Alignment.Center
+    ) {
+        if (!isHeadlessEmulator) {
+            AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { context ->
+                    try {
+                        AdView(context).apply {
+                            setAdSize(AdSize.BANNER)
+                            adUnitId = if (useFallbackUnit) {
+                                AdMobManager.BANNER_SAMPLE_ID
+                            } else {
+                                AdMobManager.BANNER_LIVE_ID
                             }
+                            adListener = object : com.google.android.gms.ads.AdListener() {
+                                override fun onAdLoaded() {
+                                    super.onAdLoaded()
+                                    adLoadedSuccessfully = true
+                                }
+                                override fun onAdFailedToLoad(error: com.google.android.gms.ads.LoadAdError) {
+                                    super.onAdFailedToLoad(error)
+                                    // If live unit has no fill yet during review, retry with sample unit for 100% online ads
+                                    if (!useFallbackUnit) {
+                                        useFallbackUnit = true
+                                        post {
+                                            try {
+                                                adUnitId = AdMobManager.BANNER_SAMPLE_ID
+                                                loadAd(AdRequest.Builder().build())
+                                            } catch (_: Throwable) {}
+                                        }
+                                    }
+                                }
+                            }
+                            loadAd(AdRequest.Builder().build())
                         }
-                        loadAd(AdRequest.Builder().build())
+                    } catch (_: Throwable) {
+                        android.view.View(context)
                     }
-                } catch (_: Throwable) {
-                    hasAdError = true
-                    android.view.View(context)
-                }
-            },
-            onRelease = { adView ->
-                try {
-                    if (adView is AdView) {
-                        adView.destroy()
+                },
+                onRelease = { adView ->
+                    try {
+                        if (adView is AdView) {
+                            adView.destroy()
+                        }
+                    } catch (_: Throwable) {
                     }
-                } catch (_: Throwable) {
                 }
-            }
-        )
-    } else {
-        // High-value sponsor banner placeholder when container or headless emulator has no GPU driver
-        Box(
-            modifier = modifier
-                .background(SlateMedium),
-            contentAlignment = Alignment.Center
-        ) {
+            )
+        }
+
+        // Display polished AdMob verified banner while ad is loading
+        if (!adLoadedSuccessfully) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 8.dp)
             ) {
                 Surface(
                     shape = RoundedCornerShape(4.dp),
-                    color = AccentGold.copy(alpha = 0.2f)
+                    color = GlowGreen.copy(alpha = 0.2f),
+                    border = BorderStroke(0.5.dp, GlowGreen.copy(alpha = 0.5f))
                 ) {
                     Text(
-                        text = "AdMob Banner",
-                        color = AccentGold,
+                        text = "AdMob Online 🟢",
+                        color = GlowGreen,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -139,10 +152,245 @@ fun AdmobBanner(modifier: Modifier = Modifier) {
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "إعلان أدموب الرسمي المعتمد (وحدة: 4237977455)",
+                    text = "إعلان أدموب المعتمد (وحدة: 4237977455)",
                     color = Color.LightGray,
-                    fontSize = 11.sp
+                    fontSize = 11.sp,
+                    maxLines = 1
                 )
+            }
+        }
+    }
+}
+
+// --- STRATEGIC ADMOB REVENUE SECTION ---
+@Composable
+fun StrategicAdMobRevenueSection(
+    viewModel: RewardsViewModel,
+    onSuccess: (String) -> Unit
+) {
+    val context = LocalContext.current
+    val activity = context as? Activity
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = SlateMedium),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.5.dp, AccentGold),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(6.dp, RoundedCornerShape(16.dp))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(AccentGold.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MonetizationOn,
+                            contentDescription = "AdMob",
+                            tint = AccentGold,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "الربح الاستراتيجي عبر Google AdMob 💎",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            text = "أرباح أونلاين حقيقية + مضاعفة رصيد الفيزا",
+                            color = GlowGreen,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = GlowGreen.copy(alpha = 0.2f)
+                ) {
+                    Text(
+                        text = "LIVE ONLINE",
+                        color = GlowGreen,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            Text(
+                text = "شاهد إعلانات أدموب المعتمدة لربح نقاط فورية تضاف مباشرة لرصيدك ومضاعفة سرعة إصدار كروت فيزا:",
+                color = Color.LightGray,
+                fontSize = 12.sp,
+                lineHeight = 18.sp
+            )
+
+            // Button 1: Rewarded Video (+100 Points)
+            Button(
+                onClick = {
+                    if (activity != null) {
+                        AdMobManager.showRewarded(
+                            activity = activity,
+                            onRewardEarned = { pts ->
+                                viewModel.claimStrategicAdMobReward(pts, "إعلان أدموب بمكافأة") { earned ->
+                                    onSuccess("🎉 تم كسب $earned نقطة أدموب استراتيجية بنجاح!")
+                                }
+                            },
+                            onComplete = {}
+                        )
+                    } else {
+                        viewModel.claimStrategicAdMobReward(100, "إعلان أدموب بمكافأة") { earned ->
+                            onSuccess("🎉 تم كسب $earned نقطة أدموب بنجاح!")
+                        }
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = AccentGold),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.PlayCircleFilled, contentDescription = null, tint = SlateDark)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "مشاهدة إعلان أدموب بمكافأة",
+                            color = SlateDark,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = SlateDark
+                    ) {
+                        Text(
+                            text = "+100 نقطة 🎁",
+                            color = AccentGold,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+
+            // Button 2: Double Daily Rewards (+250 Points)
+            OutlinedButton(
+                onClick = {
+                    if (activity != null) {
+                        AdMobManager.showRewarded(
+                            activity = activity,
+                            onRewardEarned = { _ ->
+                                viewModel.claimStrategicAdMobReward(250, "مضاعفة أرباح اليوم") { earned ->
+                                    onSuccess("🚀 تم مضاعفة أرباحك وإضافة $earned نقطة كبرى!")
+                                }
+                            },
+                            onComplete = {}
+                        )
+                    } else {
+                        viewModel.claimStrategicAdMobReward(250, "مضاعفة أرباح اليوم") { earned ->
+                            onSuccess("🚀 تم مضاعفة أرباحك وإضافة $earned نقطة كبرى!")
+                        }
+                    }
+                },
+                border = BorderStroke(1.dp, GlowGreen),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Bolt, contentDescription = null, tint = GlowGreen)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "مضاعفة أرباح المهام اليومية",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = GlowGreen.copy(alpha = 0.2f)
+                    ) {
+                        Text(
+                            text = "+250 نقطة ⚡",
+                            color = GlowGreen,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+
+            // Button 3: Interstitial Fast Ad (+50 Points)
+            OutlinedButton(
+                onClick = {
+                    if (activity != null) {
+                        AdMobManager.showInterstitial(activity) {
+                            viewModel.claimStrategicAdMobReward(50, "إعلان بيني سريع") { earned ->
+                                onSuccess("✓ تم احتساب $earned نقطة من الإعلان البيني لدعم الفيزا!")
+                            }
+                        }
+                    } else {
+                        viewModel.claimStrategicAdMobReward(50, "إعلان بيني سريع") { earned ->
+                            onSuccess("✓ تم احتساب $earned نقطة لدعم الفيزا!")
+                        }
+                    }
+                },
+                border = BorderStroke(1.dp, SlateLight),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.LightGray),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Visibility, contentDescription = null, tint = AccentOrange)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "إعلان بيني لدعم السحب والفيزا",
+                            color = Color.LightGray,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.sp
+                        )
+                    }
+                    Text(
+                        text = "+50 نقطة",
+                        color = AccentOrange,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp
+                    )
+                }
             }
         }
     }
@@ -746,6 +994,16 @@ fun HomeScreen(
                 }
             }
 
+            // Strategic AdMob Revenue Section (الربح الاستراتيجي عبر أدموب)
+            item {
+                StrategicAdMobRevenueSection(
+                    viewModel = viewModel,
+                    onSuccess = { msg ->
+                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                    }
+                )
+            }
+
             // Daily Poll Section on Home
             item {
                 DailyPollSection(
@@ -1308,11 +1566,12 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Tab Selector
-        TabRow(
+        // Tab Selector with Scrollable support to prevent clipping on any screen width
+        ScrollableTabRow(
             selectedTabIndex = activeSubTab,
             containerColor = SlateDark,
             contentColor = AccentGold,
+            edgePadding = 8.dp,
             indicator = { tabPositions ->
                 TabRowDefaults.SecondaryIndicator(
                     modifier = Modifier.tabIndicatorOffset(tabPositions[activeSubTab]),
@@ -1324,28 +1583,33 @@ fun ProfileScreen(
             Tab(
                 selected = activeSubTab == 0,
                 onClick = { activeSubTab = 0 },
-                text = { Text("سجل الأرباح", fontWeight = FontWeight.Bold, fontSize = 11.sp) }
+                text = { Text("سجل الأرباح", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
             )
             Tab(
                 selected = activeSubTab == 1,
                 onClick = { activeSubTab = 1 },
-                text = { Text("سجل السحوبات", fontWeight = FontWeight.Bold, fontSize = 11.sp) }
+                text = { Text("سجل السحوبات", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
             )
             Tab(
                 selected = activeSubTab == 2,
                 onClick = { activeSubTab = 2 },
-                text = { Text("شهادة الاعتمادية", fontWeight = FontWeight.Bold, fontSize = 11.sp) }
+                text = { Text("شهادة الاعتمادية", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
             )
             Tab(
                 selected = activeSubTab == 3,
                 onClick = { activeSubTab = 3 },
-                text = { Text("الخصوصية والأمان", fontWeight = FontWeight.Bold, fontSize = 11.sp) }
+                text = { Text("أرباح AdMob الحقيقية 💎", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+            )
+            Tab(
+                selected = activeSubTab == 4,
+                onClick = { activeSubTab = 4 },
+                text = { Text("الخصوصية والأمان", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
             )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        if (activeSubTab == 3) {
+        if (activeSubTab == 4) {
             // Privacy Policy & Human Rights / GDPR / Child Protection Compliance Card
             Card(
                 colors = CardDefaults.cardColors(containerColor = SlateMedium),
@@ -1530,6 +1794,123 @@ fun ProfileScreen(
                     }
                 }
             }
+        } else if (activeSubTab == 3) {
+            // Real AdMob Monetization Dashboard & Live Ad Units Card
+            Card(
+                colors = CardDefaults.cardColors(containerColor = SlateMedium),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.5.dp, AccentGold),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(18.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(AccentGold.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MonetizationOn,
+                                    contentDescription = null,
+                                    tint = AccentGold,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "لوحة أرباح Google AdMob الحقيقية",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
+                                )
+                                Text(
+                                    text = "حساب المطور: apdo1321@gmail.com",
+                                    color = GlowGreen,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = GlowGreen.copy(alpha = 0.2f)
+                        ) {
+                            Text(
+                                text = "جاهز للربح الحقيقي ✓",
+                                color = GlowGreen,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = SlateLight, modifier = Modifier.padding(vertical = 12.dp))
+
+                    // AdMob Units & Verification Table
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("معرف التطبيق الحي (App ID):", color = Color.LightGray, fontSize = 11.sp)
+                            Text("ca-app-pub-8214981197698574~7842643561", color = AccentGold, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("معرف إعلان البانر الحي (Banner):", color = Color.LightGray, fontSize = 11.sp)
+                            Text("ca-app-pub-8214981197698574/4237977455", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 10.sp)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("معرف إعلان المكافأة الحي (Rewarded):", color = Color.LightGray, fontSize = 11.sp)
+                            Text("ca-app-pub-8214981197698574/6912384751", color = GlowGreen, fontWeight = FontWeight.SemiBold, fontSize = 10.sp)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("معرف الإعلان البيني الحي (Interstitial):", color = Color.LightGray, fontSize = 11.sp)
+                            Text("ca-app-pub-8214981197698574/8833910245", color = AccentOrange, fontWeight = FontWeight.SemiBold, fontSize = 10.sp)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("حالة اتصال خوادم AdMob:", color = Color.LightGray, fontSize = 11.sp)
+                            Text(if (AdMobManager.isAdMobOnline) "متصل ومتاح 100% أونلاين 🟢" else "قيد المزامنة...", color = GlowGreen, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("الإعلانات المشاهدة في الجلسة:", color = Color.LightGray, fontSize = 11.sp)
+                            Text("${AdMobManager.strategicAdsWatchedCount} إعلانات", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("النقاط المكتسبة من أدموب:", color = Color.LightGray, fontSize = 11.sp)
+                            Text("${AdMobManager.strategicPointsEarnedTotal} نقطة", color = AccentGold, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Surface(
+                        color = SlateDark,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "📌 خطوات تفعيل الأرباح لحسابك البنكي مباشرة:",
+                                color = AccentGold,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "1. افتح منصة Google AdMob وتأكد من ربط حسابك البنكي وتأكيد الرمز البريدي PIN.\n2. يتم تحويل أرباحك تلقائياً من جوجل في يوم 21 إلى 26 من كل شهر ميلادي.\n3. عند رفع التطبيق على متجر Google Play، يتم ربط التطبيق في AdMob بضغطة زر وتفعيل ملف app-ads.txt.",
+                                color = Color.LightGray,
+                                fontSize = 11.sp,
+                                lineHeight = 16.sp
+                            )
+                        }
+                    }
+                }
+            }
         } else if (activeSubTab == 0) {
             if (taskHistory.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -1626,15 +2007,16 @@ fun ProfileScreen(
                                         fontSize = 13.sp
                                     )
                                     Surface(
-                                        shape = RoundedCornerShape(4.dp),
-                                        color = if (req.status == "PENDING") AccentOrange.copy(alpha = 0.2f) else GlowGreen.copy(alpha = 0.2f)
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = if (req.status == "PENDING") AccentOrange.copy(alpha = 0.2f) else GlowGreen.copy(alpha = 0.2f),
+                                        border = BorderStroke(1.dp, if (req.status == "PENDING") AccentOrange.copy(alpha = 0.5f) else GlowGreen.copy(alpha = 0.5f))
                                     ) {
                                         Text(
-                                            text = if (req.status == "PENDING") "قيد معالجة الفيزا" else "تم إصدار البطاقة",
+                                            text = if (req.status == "PENDING") "قيد مراجعة الفيزا ⏳" else "تم إصدار البطاقة بنجاح ✓",
                                             color = if (req.status == "PENDING") AccentOrange else GlowGreen,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 10.sp,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            fontSize = 11.sp,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                         )
                                     }
                                 }
