@@ -102,6 +102,18 @@ fun SurveysScreen(viewModel: RewardsViewModel) {
             verticalArrangement = Arrangement.spacedBy(14.dp),
             modifier = Modifier.weight(1f)
         ) {
+            // Market Research Partner Hub (TGM Panel, Ipsos iSay, Surveyeah)
+            item {
+                MarketResearchPartnerHubCard(
+                    onSelectFastSurvey = {
+                        val tgmSurvey = viewModel.surveysList.firstOrNull { it.id == "survey_tgm_middle_east" }
+                        if (tgmSurvey != null) {
+                            viewModel.startSurvey(tgmSurvey)
+                        }
+                    }
+                )
+            }
+
             // Daily Quick Poll Card
             item {
                 DailyPollSection(
@@ -757,3 +769,108 @@ fun TakingSurveyDialog(
         }
     }
 }
+
+// Market Research Partner Hub Card (TGM Panel, Ipsos iSay, Surveyeah)
+@Composable
+fun MarketResearchPartnerHubCard(
+    onSelectFastSurvey: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = SlateMedium),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, GlowGreen.copy(alpha = 0.5f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(GlowGreen.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Public,
+                            contentDescription = null,
+                            tint = GlowGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "منظومة أبحاث السوق المعتمدة",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                        Text(
+                            text = "معايير TGM Panel • Ipsos iSay • Surveyeah",
+                            color = AccentGold,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = GlowGreen.copy(alpha = 0.2f)
+                ) {
+                    Text(
+                        text = "عائد مضاعف 2.5K+",
+                        color = GlowGreen,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = "استطلاعات ودراسات موثوقة بنقاط عالية ترتبط مباشرة بمشروع فيزا وسرعة السحب الفوري، تضمن للمستخدم أعلى مصداقية وللمطور أعلى عوائد أدموب رسمية.",
+                color = Color.LightGray,
+                fontSize = 11.sp,
+                lineHeight = 16.sp
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Fast Button
+            Button(
+                onClick = onSelectFastSurvey,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AccentGold,
+                    contentColor = SlateDark
+                ),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Bolt,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "بدء استطلاع TGM لدراسة السوق العربي (+1,500 نقطة)",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+    }
+}
+

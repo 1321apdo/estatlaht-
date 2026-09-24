@@ -46,6 +46,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.data.model.HighValueAdSenseTask
@@ -67,30 +70,62 @@ val AccentOrange = Color(0xFFFF6D00)
 val GlowGreen = Color(0xFF00E676)
 val ErrorRed = Color(0xFFFF1744)
 
-// --- REAL ADMOB BANNER COMPONENT ---
+/**
+ * Real AdMob Banner Ad Composable.
+ * Initializes MobileAds and loads/displays an AdMob Banner Ad within the main UI structure to facilitate revenue generation.
+ */
 @Composable
-fun AdmobBanner(modifier: Modifier = Modifier) {
-    // Check whether we are in a headless cloud container without GPU rendernode
+fun AdmobBanner(
+    modifier: Modifier = Modifier,
+    adUnitId: String = AdMobManager.BANNER_LIVE_ID
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val isHeadlessEmulator = remember { AdMobManager.isHeadlessContainer() }
     var adLoadedSuccessfully by remember { mutableStateOf(false) }
     var useFallbackUnit by remember { mutableStateOf(false) }
+    var adViewRef by remember { mutableStateOf<AdView?>(null) }
+
+    // 1. Explicitly initialize MobileAds on first composition
+    LaunchedEffect(Unit) {
+        AdMobManager.initialize(context)
+    }
+
+    // 2. Lifecycle management for AdView (pause / resume / destroy)
+    DisposableEffect(lifecycleOwner, adViewRef) {
+        val currentAdView = adViewRef
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> currentAdView?.resume()
+                Lifecycle.Event.ON_PAUSE -> currentAdView?.pause()
+                Lifecycle.Event.ON_DESTROY -> currentAdView?.destroy()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            currentAdView?.destroy()
+        }
+    }
 
     Box(
         modifier = modifier
+            .testTag("admob_banner_ad")
             .background(SlateMedium),
         contentAlignment = Alignment.Center
     ) {
         if (!isHeadlessEmulator) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
-                factory = { context ->
+                factory = { ctx ->
                     try {
-                        AdView(context).apply {
+                        AdView(ctx).apply {
                             setAdSize(AdSize.BANNER)
-                            adUnitId = if (useFallbackUnit) {
+                            this.adUnitId = if (useFallbackUnit) {
                                 AdMobManager.BANNER_SAMPLE_ID
                             } else {
-                                AdMobManager.BANNER_LIVE_ID
+                                adUnitId
                             }
                             adListener = object : com.google.android.gms.ads.AdListener() {
                                 override fun onAdLoaded() {
@@ -104,7 +139,7 @@ fun AdmobBanner(modifier: Modifier = Modifier) {
                                         useFallbackUnit = true
                                         post {
                                             try {
-                                                adUnitId = AdMobManager.BANNER_SAMPLE_ID
+                                                this@apply.adUnitId = AdMobManager.BANNER_SAMPLE_ID
                                                 loadAd(AdRequest.Builder().build())
                                             } catch (_: Throwable) {}
                                         }
@@ -112,9 +147,15 @@ fun AdmobBanner(modifier: Modifier = Modifier) {
                                 }
                             }
                             loadAd(AdRequest.Builder().build())
+                            adViewRef = this
                         }
                     } catch (_: Throwable) {
-                        android.view.View(context)
+                        android.view.View(ctx)
+                    }
+                },
+                update = { view ->
+                    if (view is AdView && adViewRef != view) {
+                        adViewRef = view
                     }
                 },
                 onRelease = { adView ->
@@ -122,8 +163,7 @@ fun AdmobBanner(modifier: Modifier = Modifier) {
                         if (adView is AdView) {
                             adView.destroy()
                         }
-                    } catch (_: Throwable) {
-                    }
+                    } catch (_: Throwable) {}
                 }
             )
         }
@@ -152,7 +192,7 @@ fun AdmobBanner(modifier: Modifier = Modifier) {
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "إعلان أدموب المعتمد (وحدة: 4237977455)",
+                    text = "إعلان أدموب المعتمد (وحدة: ${adUnitId.takeLast(10)})",
                     color = Color.LightGray,
                     fontSize = 11.sp,
                     maxLines = 1

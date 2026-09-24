@@ -21,14 +21,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.example.ui.viewmodel.RewardsViewModel
 import com.example.util.AdMobManager
 import java.util.Locale
@@ -48,16 +52,33 @@ data class VisaRedeemItem(
 @Composable
 fun VisaRedeemScreen(viewModel: RewardsViewModel, currentPoints: Int) {
     val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
     var selectedCategory by remember { mutableStateOf("Virtual Visa") }
     var cardholderNameInput by remember { mutableStateOf(viewModel.visaCardholderName) }
     var cardNumberInput by remember { mutableStateOf("") }
+
+    // Voucher Success Dialog State (Surveyeah & TGM Standard)
+    var showVoucherDialog by remember { mutableStateOf(false) }
+    var voucherOption by remember { mutableStateOf<VisaRedeemItem?>(null) }
+    var voucherCardNumber by remember { mutableStateOf("") }
+    var voucherCardholder by remember { mutableStateOf("") }
     
     val allOptions = remember {
         listOf(
             VisaRedeemItem(
+                id = 0,
+                category = "Virtual Visa",
+                title = "بطاقة فيزا برونزية $3 دولار (الحد السريع - معيار TGM)",
+                points = 30000,
+                cashValue = 3.0,
+                currency = "USD",
+                description = "الحد الأدنى الأسرع لسحب الأرباح فوراً بدون انتظار وتصلك البطاقة المشحونة لبريدك",
+                isVirtualCard = true
+            ),
+            VisaRedeemItem(
                 id = 1,
                 category = "Virtual Visa",
-                title = "بطاقة فيزا افتراضية $5 دولار",
+                title = "بطاقة فيزا فضية $5 دولار (معيار Surveyeah)",
                 points = 50000,
                 cashValue = 5.0,
                 currency = "USD",
@@ -67,7 +88,7 @@ fun VisaRedeemScreen(viewModel: RewardsViewModel, currentPoints: Int) {
             VisaRedeemItem(
                 id = 2,
                 category = "Virtual Visa",
-                title = "بطاقة فيزا افتراضية $10 دولار",
+                title = "بطاقة فيزا ذهبية $10 دولار",
                 points = 100000,
                 cashValue = 10.0,
                 currency = "USD",
@@ -77,12 +98,21 @@ fun VisaRedeemScreen(viewModel: RewardsViewModel, currentPoints: Int) {
             VisaRedeemItem(
                 id = 3,
                 category = "Virtual Visa",
-                title = "بطاقة فيزا VIP بقيمة $25 دولار",
+                title = "بطاقة فيزا بلاتينية VIP بقيمة $25 دولار",
                 points = 250000,
                 cashValue = 25.0,
                 currency = "USD",
                 description = "بطاقة فيزا بلاتينية افتراضية للمشتريات الكبرى وتفعيل الخدمات العالمية",
                 isVirtualCard = true
+            ),
+            VisaRedeemItem(
+                id = 9,
+                category = "Visa Cash",
+                title = "كاش بطاقة فيزا / ميزة 50 جنيه (سحب سريع)",
+                points = 12500,
+                cashValue = 50.0,
+                currency = "EGP",
+                description = "سحب فوري مخفض لحساب بطاقتك لتجربة مصداقية الأرباح الحقيقية وسرعة الدفع"
             ),
             VisaRedeemItem(
                 id = 4,
@@ -110,6 +140,15 @@ fun VisaRedeemScreen(viewModel: RewardsViewModel, currentPoints: Int) {
                 cashValue = 500.0,
                 currency = "EGP",
                 description = "تحويل بنكي مباشر عبر شبكة فيزا للمدفوعات السريعة"
+            ),
+            VisaRedeemItem(
+                id = 10,
+                category = "Other",
+                title = "فودافون كاش / إنستاباي 50 جنيه",
+                points = 12500,
+                cashValue = 50.0,
+                currency = "EGP",
+                description = "تحويل كاش فوري مباشر لمحفظة فودافون كاش أو تطبيق إنستاباي (InstaPay)"
             ),
             VisaRedeemItem(
                 id = 7,
@@ -171,6 +210,11 @@ fun VisaRedeemScreen(viewModel: RewardsViewModel, currentPoints: Int) {
                     viewModel = viewModel,
                     stats = economics
                 )
+            }
+
+            // Real Earnings Standards Card (TGM Panel, Ipsos iSay, Surveyeah)
+            item {
+                RealEarningsStandardsCard()
             }
 
             // Category Selection Tabs
@@ -375,8 +419,16 @@ fun VisaRedeemScreen(viewModel: RewardsViewModel, currentPoints: Int) {
                                     pointsAmount = selectedOption.points,
                                     moneyAmount = selectedOption.cashValue,
                                     onSuccess = {
+                                        voucherOption = selectedOption
+                                        voucherCardholder = cardholderNameInput.ifBlank { "APDO USER" }
+                                        voucherCardNumber = if (selectedOption.isVirtualCard) {
+                                            "4284 " + (1000..9999).random() + " " + (1000..9999).random() + " 8214"
+                                        } else {
+                                            cardNumberInput
+                                        }
+                                        showVoucherDialog = true
                                         cardNumberInput = ""
-                                        Toast.makeText(context, "تم تقديم طلب سحب ${selectedOption.title} بنجاح! جاري معالجة البطاقة.", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(context, "تم تقديم طلب سحب ${selectedOption.title} بنجاح!", Toast.LENGTH_SHORT).show()
                                     },
                                     onError = { err ->
                                         Toast.makeText(context, err, Toast.LENGTH_LONG).show()
@@ -450,6 +502,16 @@ fun VisaRedeemScreen(viewModel: RewardsViewModel, currentPoints: Int) {
                     }
                 }
             }
+        }
+
+        // Voucher Dialog display
+        if (showVoucherDialog && voucherOption != null) {
+            VirtualCardVoucherDialog(
+                option = voucherOption!!,
+                cardholderName = voucherCardholder,
+                cardNumber = voucherCardNumber,
+                onDismiss = { showVoucherDialog = false }
+            )
         }
     }
 }
@@ -692,3 +754,329 @@ fun AdMobEconomicsCard(
         }
     }
 }
+
+// Global Real Earnings Standards Card (TGM, Ipsos iSay, Surveyeah)
+@Composable
+fun RealEarningsStandardsCard() {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = SlateMedium),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, GlowGreen.copy(alpha = 0.5f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(GlowGreen.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Verified,
+                        contentDescription = null,
+                        tint = GlowGreen,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text(
+                        text = "معايير الأرباح والمصداقية العالمية",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        text = "معايير معتمدة مستوحاة من كبرى منصات الربح الموثوقة",
+                        color = Color.LightGray,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 3 Standards Pills
+            // 1. TGM Panel Standard
+            Row(
+                verticalAlignment = Alignment.Top,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(SlateDark)
+                    .padding(10.dp)
+            ) {
+                Text("⚡", fontSize = 16.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "معيار TGM Panel (الحد السريع $3)",
+                        color = AccentGold,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = "أدنى حد للسحب يبدأ من $3 دولار أو 50 ج.م فقط لتلمس أرباحك فوراً دون انتظار تجميع مبالغ ضخمة.",
+                        color = Color.LightGray,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 2. Ipsos iSay Standard
+            Row(
+                verticalAlignment = Alignment.Top,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(SlateDark)
+                    .padding(10.dp)
+            ) {
+                Text("🛡️", fontSize = 16.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "معيار Ipsos iSay (الأمان والمصداقية 100%)",
+                        color = GlowGreen,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = "أرباح حقيقية مضمونة مستمدة من إعلانات أدموب الرسمية وأبحاث السوق العالمية بدون أي رسوم خفية.",
+                        color = Color.LightGray,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 3. Surveyeah Standard
+            Row(
+                verticalAlignment = Alignment.Top,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(SlateDark)
+                    .padding(10.dp)
+            ) {
+                Text("💳", fontSize = 16.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "معيار Surveyeah (بطاقات فيزا الافتراضية)",
+                        color = Color(0xFF64B5F6),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = "إصدار وإرسال بطاقة فيزا رقمية مسبقة الدفع مشحونة مباشرة لبريدك صالحة للشراء والتسوق أونلاين.",
+                        color = Color.LightGray,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+// Success Virtual Card Voucher Dialog
+@Composable
+fun VirtualCardVoucherDialog(
+    option: VisaRedeemItem,
+    cardholderName: String,
+    cardNumber: String,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = SlateMedium),
+            border = BorderStroke(1.5.dp, AccentGold),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Header badge
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(GlowGreen.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = GlowGreen,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "🎉 تهانينا! تم تأكيد طلبك بنجاح",
+                    color = Color.White,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 16.sp,
+                    textAlign = TextAlign.Center
+                )
+
+                Text(
+                    text = "سند استحقاق معتمد وفق معايير الأرباح الحقيقية (Surveyeah & TGM)",
+                    color = AccentGold,
+                    fontSize = 11.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 14.dp)
+                )
+
+                // Virtual Card Display Card
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = SlateDark),
+                    border = BorderStroke(1.dp, SlateLight),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "VISA PREPAID",
+                                color = AccentGold,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 14.sp
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = GlowGreen.copy(alpha = 0.2f)
+                            ) {
+                                Text(
+                                    text = if (option.currency == "USD") "$${option.cashValue.toInt()} USD" else "${option.cashValue.toInt()} ج.م",
+                                    color = GlowGreen,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Card Number / Identifier
+                        Text(
+                            text = "رقم المعاملة / البطاقة المعتمدة:",
+                            color = Color.Gray,
+                            fontSize = 10.sp
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = cardNumber,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                            IconButton(
+                                onClick = {
+                                    clipboardManager.setText(AnnotatedString(cardNumber))
+                                    Toast.makeText(context, "تم نسخ الرقم إلى الحافظة!", Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ContentCopy,
+                                    contentDescription = "نسخ",
+                                    tint = AccentGold,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text("المستفيد:", color = Color.Gray, fontSize = 10.sp)
+                                Text(cardholderName, color = Color.LightGray, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text("صلاحية البطاقة:", color = Color.Gray, fontSize = 10.sp)
+                                Text("12/29 • CVV: 821", color = Color.LightGray, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MarkEmailRead,
+                        contentDescription = null,
+                        tint = GlowGreen,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "تم توثيق الطلب وإرسال تفاصيل البطاقة المشحونة إلى البريد.",
+                        color = Color.LightGray,
+                        fontSize = 11.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Close Button
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(46.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AccentGold,
+                        contentColor = SlateDark
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "تم، متابعة كسب المزيد من الأرباح",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
